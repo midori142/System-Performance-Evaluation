@@ -4,11 +4,13 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from kneed import KneeLocator
 
 # Define parameters for the single queue M/M/1/n
 LAMBDA = 0.12
 MU = 0.1
-BUFFER = 500
+BUFFER = 100
+
 RHO = LAMBDA/MU
 
 # Simulation settings
@@ -166,8 +168,6 @@ class JobGenerator:
 
 
 
-
-
 # Open the log file
 logs = []
 if (LOGGED):
@@ -210,6 +210,7 @@ ew = nq/(LAMBDA*(1-pb))
 
 # Print analytical performance
 print('------------ Analytical Performance ------------')
+print('Traffic intensity:                   %.2f' % (RHO))
 print('Mean no. of jobs in the system:      %.2f' % (n))
 print('Mean no. of jobs in the queue:       %.2f' % (nq))
 print('Mean response time:                  %.2f' % (er))
@@ -217,10 +218,12 @@ print('Mean waiting time:                   %.2f' % (ew))
  
 # Print simulation performance
 print('------------ Simulation Performance ------------')
+print('Traffic intensity:                   %.2f' % (1-servers[0].idle_time/SIMULATION_TIME))
 print('Mean no. of jobs in the system:      %.2f' % (dfs[0]['Queue length'].mean()))
+print('Mean no. of jobs in the queue:       %.2f' % ((dfs[0]['Queue length'] - 1).mean()))
 print('Mean response time:                  %.2f' % (servers[0].response_time/job_generators[0].job_id))
 print('Mean waiting time:                   %.2f' % (servers[0].waiting_time/job_generators[0].job_id))
-print('System utilization:                  %.2f' % (1-servers[0].idle_time/SIMULATION_TIME))
+print('System utilization:                  %.2f/%.2f' % (1-servers[0].idle_time/SIMULATION_TIME, RHO))
 print('System reliability:                  %.2f' % (1-(job_generators[0].rejected_jobs/job_generators[0].job_id)))
 
 # Plot results
@@ -254,5 +257,12 @@ if (PLOT):
     relative_change = (mean_nl - mean)/mean
     df_relative_change = pd.DataFrame({'L':l, 'Relative change':relative_change})
     sns.lineplot(x='L', y='Relative change', data=df_relative_change, ax=axs[1][1])
+
+    #Knee locator
+    a = range(1, len(relative_change)+1)
+    kn = KneeLocator(a, relative_change, curve = 'concave', direction = 'increasing')
+    print('Knee point is at L =                 %d' %(kn.knee))
+    # plt.step(log[index.knee,0],meanR[index.knee],'r*')
+    # plt.text(log[index.knee,0]-0.05,meanR[index.knee],'Knee Point')
 
     plt.show()
