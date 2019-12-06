@@ -5,6 +5,7 @@ Implement and analyze the performance a M/M/1/n queue
 
 ```
 python3 -m venv venv
+source ./venv/bin/activate
 pip install -r requirements.txt
 ```
 
