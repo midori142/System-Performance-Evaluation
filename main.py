@@ -5,7 +5,19 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+# Define parameters for the single queue M/M/1/n
+LAMBDA = 0.12
+MU = 0.1
+BUFFER = 500
+RHO = LAMBDA/MU
 
+# Simulation settings
+SEED = 2019
+VERBOSE = False
+LOGGED = True
+PLOT = True
+REPLICATIONS = 4
+random.seed(SEED)
 
 class Job:
     """Definition of a Job object in the queueing system
@@ -154,19 +166,7 @@ class JobGenerator:
 
 
 
-# Define parameters for the single queue M/M/1/n
-LAMBDA = 0.12
-MU = 0.1
-BUFFER = 100
-RHO = LAMBDA/MU
 
-# Simulation settings
-SEED = 2019
-VERBOSE = False
-LOGGED = True
-PLOT = True
-REPLICATIONS = 4
-random.seed(SEED)
 
 # Open the log file
 logs = []
