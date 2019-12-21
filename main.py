@@ -264,7 +264,7 @@ if (PLOT):
     a = range(1, len(relative_change)+1)
     kn = KneeLocator(a, relative_change, curve = 'concave', direction = 'increasing')
     ymin, ymax = axs[1][1].get_ybound()
-    axs[1][1].plot([kn.knee, kn.knee], [ymin, ymax])
+    axs[1][1].plot([kn.knee, kn.knee], [ymin, ymax], linestyle = 'dashed', color = 'red')
     
     
     print('Knee point is at L =                 %d' %(kn.knee))
