@@ -10,9 +10,9 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 
 # Define parameters for the single queue M/M/1/n
-LAMBDA = 1
+LAMBDA = 0.3
 MU     = 0.2
-BUFFER = 1000
+BUFFER = 100
 RHO    = LAMBDA/MU
 
 # Simulation settings
@@ -27,14 +27,14 @@ class Job:
     """Definition of a Job object in the queueing system
 
     Args:
-        job_id (int):       A unique ID of the job
-        arrive_time (int):  The time that the job arrive
-        service_time (int): The time requires to serve the job
+        job_id (int):                   A unique ID of the job
+        arrive_time (int):              The time that the job arrive
+        service_time (int):             The time requires to serve the job
         
     Attributes:
-        job_id (int):       A unique ID of the job
-        arrive_time (int):  The time that the job arrive
-        service_time (int): The time requires to serve the job
+        job_id (int):                   A unique ID of the job
+        arrive_time (int):              The time that the job arrive
+        service_time (int):             The time requires to serve the job
 
     """
 
@@ -49,16 +49,18 @@ class Server:
     """Definition of a Server object in the queueing system
 
     Args:
-        env (simpy.core.Environment): SimPy environment
+        log_id (int):                   The id of the destination log file
+        env (simpy.core.Environment):   SimPy environment
 
     Attributes:
-        jobs (list):        The job queue
-        is_sleeping (bool): A flag to indicate whether the system is idling or not
+        log_id (int):                   The id of the destination log file
+        jobs (list):                    The job queue
+        is_sleeping (bool):             A flag to indicate whether the system is idling or not
 
     """
 
-    def __init__(self, log, env):
-        self.log = log 
+    def __init__(self, log_id, env):
+        self.log_id = log_id
         self.jobs = []
         self.is_sleeping = None
         self.response_time = 0
@@ -116,7 +118,7 @@ class JobGenerator:
     and service time
 
     Args:
-        log ():                         
+        log_id (int):                   The id of the destination log file
         env (simpy.core.Environment):   SimPy environment
         server (Server):                Server object
         max_jobs (int):                 System capacity i.e. maximum queue length
@@ -124,7 +126,7 @@ class JobGenerator:
         mu (float):                     Mean service rate per server
 
     Attributes:
-        log ():                         
+        log_id (int):                   The id of the destination log file
         env (simpy.core.Environment):   SimPy environment
         server (Server):                Server object
         max_jobs (int):                 System capacity i.e. maximum queue length
@@ -134,8 +136,8 @@ class JobGenerator:
 
     """
 
-    def __init__(self, log, env, server, max_jobs, lamb = 0.1, mu = 0.1):
-        self.log = log
+    def __init__(self, log_id, env, server, max_jobs, lamb = 0.1, mu = 0.1):
+        self.log_id = log_id
         self.server = server
         self.max_jobs = max_jobs
         self.job_id = 0
@@ -165,17 +167,32 @@ class JobGenerator:
     def record(self, env):
         while True:
             if (LOGGED):
-                self.log.write('%d,%d\n' % (env.now, len(self.server.jobs)))
+                if (self.job_id != 0):
+                    logs[self.log_id].write('%d,%d,%f,%f,%f,%f\n' % (
+                        env.now,                                            # Time
+                        len(self.server.jobs),                              # Queue Length
+                        servers[self.log_id].response_time/self.job_id,     # Mean response time
+                        servers[self.log_id].waiting_time/self.job_id,      # Mean waiting time
+                        1-servers[self.log_id].idle_time/env.now,           # Utilization
+                        1-self.rejected_jobs/self.job_id))                  # Reliability
+                else:
+                    logs[self.log_id].write('%d,%d,%f,%f,%f,%f\n' % (
+                        env.now,                                            # Time
+                        len(self.server.jobs),                              # Queue Length
+                        0,                                                  # Mean response time
+                        0,                                                  # Mean waiting time
+                        0,                                                  # Utilization
+                        1))                                                 # Reliability
                 yield env.timeout(1)
 
 
 
-# Open the log file
+# Open the log files
 logs = []
 if (LOGGED):
     for i in range(REPLICATIONS):
         logs.append(open('log'+str(SEED+i)+'.csv', 'w'))
-        logs[i].write('Time,Queue length\n')
+        logs[i].write('Time,Queue Length,Mean Response Time,Mean Waiting Time,Utilization,Reliability\n')
 
 # Create a simulation environment
 INFINITE_TIME = 100000000
@@ -186,8 +203,8 @@ servers = []
 job_generators = []
 for i in range(REPLICATIONS):
     envs.append(simpy.Environment())
-    servers.append(Server(logs[i], envs[i]))
-    job_generators.append(JobGenerator(logs[i], envs[i], servers[i], BUFFER, LAMBDA, MU))
+    servers.append(Server(i, envs[i]))
+    job_generators.append(JobGenerator(i, envs[i], servers[i], BUFFER, LAMBDA, MU))
 
 # Start the simulation
 for i in range(REPLICATIONS):
@@ -221,8 +238,8 @@ print('Mean waiting time:                   %.2f' % (ew))
 # Print simulation performance
 print('------------ Simulation Performance ------------')
 print('Traffic intensity:                   %.2f' % (1-servers[0].idle_time/SIMULATION_TIME))
-print('Mean no. of jobs in the system:      %.2f' % (dfs[0]['Queue length'].mean()))
-print('Mean no. of jobs in the queue:       %.2f' % ((dfs[0]['Queue length'] - 1).mean()))
+print('Mean no. of jobs in the system:      %.2f' % (dfs[0]['Queue Length'].mean()))
+print('Mean no. of jobs in the queue:       %.2f' % ((dfs[0]['Queue Length'] - 1).mean()))
 print('Mean response time:                  %.2f' % (servers[0].response_time/job_generators[0].job_id))
 print('Mean waiting time:                   %.2f' % (servers[0].waiting_time/job_generators[0].job_id))
 print('System utilization:                  %.2f/%.2f' % (1-servers[0].idle_time/SIMULATION_TIME, RHO))
@@ -230,37 +247,40 @@ print('System reliability:                  %.2f' % (1-(job_generators[0].reject
 
 # Plot results
 if (PLOT):
+    # Choose metric to plot 'Time', 'Queue Length', 'Mean Response Time', 'Mean Waiting Time', 'Utilization', 'Reliability'
+    target_metric = 'Utilization'
+
     fig, axs = plt.subplots(2, 2)
 
     # Individual replications
     axs[0][0].set_title('Individual replications')
     for i in range(REPLICATIONS):
-        sns.lineplot(x='Time', y='Queue length', data=dfs[i], ax=axs[0][0])
+        sns.lineplot(x='Time', y=target_metric, data=dfs[i], ax=axs[0][0])
 
     # Mean accross replications
     axs[0][1].set_title('Mean across replications')
     df_mean = pd.concat(tuple([df for df in dfs]))
     df_mean = df_mean.groupby('Time').sum().reset_index()
-    df_mean['Queue length'] /= REPLICATIONS
-    sns.lineplot(x='Time', y='Queue length', data=df_mean, ax=axs[0][1])
+    df_mean[target_metric] /= REPLICATIONS
+    sns.lineplot(x='Time', y=target_metric, data=df_mean, ax=axs[0][1])
     df_mean.to_csv('mean.csv')
 
     # Mean of last n-L observations 
     axs[1][0].set_title('Mean of last n-L observations')
     l = np.arange(SIMULATION_TIME)
-    mean_nl = [df_mean['Queue length'].tail(len(df_mean)-i).mean() for i in range(len(df_mean))]
+    mean_nl = [df_mean[target_metric].tail(len(df_mean)-i).mean() for i in range(len(df_mean))]
     df_mean_nl = pd.DataFrame({'L':l, 'Mean n-L':mean_nl})
     sns.lineplot(x='L', y='Mean n-L', data=df_mean_nl, ax=axs[1][0])
     df_mean_nl.to_csv('mean_nl.csv')
 
     # Relative change
     axs[1][1].set_title('Relative changes')
-    mean = df_mean['Queue length'].mean()
+    mean = df_mean[target_metric].mean()
     relative_change = (mean_nl - mean)/mean
     df_relative_change = pd.DataFrame({'L':l, 'Relative change':relative_change})
     sns.lineplot(x='L', y='Relative change', data=df_relative_change, ax=axs[1][1])
 
-    #Knee locator
+    # Knee locator
     a = range(1, len(relative_change)+1)
     kn = KneeLocator(a, relative_change, curve = 'concave', direction = 'increasing')
     ymin, ymax = axs[1][1].get_ybound()
@@ -269,5 +289,4 @@ if (PLOT):
     
     print('Knee point is at L =                 %d' %(kn.knee))
     
-
     plt.show()
