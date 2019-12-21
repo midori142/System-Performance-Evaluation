@@ -196,7 +196,7 @@ if (LOGGED):
 
 # Create a simulation environment
 INFINITE_TIME = 100000000
-SIMULATION_TIME = 50000
+SIMULATION_TIME = 10000
 POPULATION = 50000000
 envs = []
 servers = []
@@ -247,46 +247,51 @@ print('System reliability:                  %.2f' % (1-(job_generators[0].reject
 
 # Plot results
 if (PLOT):
-    # Choose metric to plot 'Time', 'Queue Length', 'Mean Response Time', 'Mean Waiting Time', 'Utilization', 'Reliability'
-    target_metric = 'Utilization'
+    # Specify all available metrics
+    metrics     = ['Queue Length', 'Mean Response Time', 'Mean Waiting Time', 'Utilization', 'Reliability']
+    curves      = ['concave', 'concave', 'concave', 'concave', 'convex']
+    directions  = ['increasing', 'increasing', 'increasing', 'increasing', 'decreasing']
 
-    fig, axs = plt.subplots(2, 2)
+    fig, axs = plt.subplots(5, 2)
 
+    '''
     # Individual replications
     axs[0][0].set_title('Individual replications')
     for i in range(REPLICATIONS):
         sns.lineplot(x='Time', y=target_metric, data=dfs[i], ax=axs[0][0])
+    '''
 
-    # Mean accross replications
-    axs[0][1].set_title('Mean across replications')
-    df_mean = pd.concat(tuple([df for df in dfs]))
-    df_mean = df_mean.groupby('Time').sum().reset_index()
-    df_mean[target_metric] /= REPLICATIONS
-    sns.lineplot(x='Time', y=target_metric, data=df_mean, ax=axs[0][1])
-    df_mean.to_csv('mean.csv')
-
-    # Mean of last n-L observations 
-    axs[1][0].set_title('Mean of last n-L observations')
-    l = np.arange(SIMULATION_TIME)
-    mean_nl = [df_mean[target_metric].tail(len(df_mean)-i).mean() for i in range(len(df_mean))]
-    df_mean_nl = pd.DataFrame({'L':l, 'Mean n-L':mean_nl})
-    sns.lineplot(x='L', y='Mean n-L', data=df_mean_nl, ax=axs[1][0])
-    df_mean_nl.to_csv('mean_nl.csv')
-
-    # Relative change
-    axs[1][1].set_title('Relative changes')
-    mean = df_mean[target_metric].mean()
-    relative_change = (mean_nl - mean)/mean
-    df_relative_change = pd.DataFrame({'L':l, 'Relative change':relative_change})
-    sns.lineplot(x='L', y='Relative change', data=df_relative_change, ax=axs[1][1])
-
-    # Knee locator
-    a = range(1, len(relative_change)+1)
-    kn = KneeLocator(a, relative_change, curve = 'concave', direction = 'increasing')
-    ymin, ymax = axs[1][1].get_ybound()
-    axs[1][1].plot([kn.knee, kn.knee], [ymin, ymax], linestyle = 'dashed', color = 'red')
+    for col in range(len(metrics)):
+        # Mean accross replications
+        #axs[0][col].set_title('Mean across replications')
+        axs[col][0].set_title('Mean across replications')
+        df_mean = pd.concat(tuple([df for df in dfs]))
+        df_mean = df_mean.groupby('Time').sum().reset_index()
+        df_mean[metrics[col]] /= REPLICATIONS
+        sns.lineplot(x='Time', y=metrics[col], data=df_mean, ax=axs[col][0])
+        df_mean.to_csv('mean.csv')
     
+        # Mean of last n-L observations 
+        #axs[1][0].set_title('Mean of last n-L observations')
+        l = np.arange(SIMULATION_TIME)
+        mean_nl = [df_mean[metrics[col]].tail(len(df_mean)-i).mean() for i in range(len(df_mean))]
+        df_mean_nl = pd.DataFrame({'L':l, 'Mean n-L':mean_nl})
+        #sns.lineplot(x='L', y='Mean n-L', data=df_mean_nl, ax=axs[1][0])
+        df_mean_nl.to_csv('mean_nl.csv')
     
-    print('Knee point is at L =                 %d' %(kn.knee))
+        # Relative change
+        axs[col][1].set_title('Relative changes')
+        mean = df_mean[metrics[col]].mean()
+        relative_change = (mean_nl - mean)/mean
+        df_relative_change = pd.DataFrame({'L':l, 'Relative change':relative_change})
+        sns.lineplot(x='L', y='Relative change', data=df_relative_change, ax=axs[col][1])
+    
+        # Knee locator
+        a = range(1, len(relative_change)+1)
+        kn = KneeLocator(a, relative_change, curve = curves[i], direction = directions[i])
+        ymin, ymax = axs[col][1].get_ybound()
+        axs[col][1].plot([kn.knee, kn.knee], [ymin, ymax], linestyle = 'dashed', color = 'red')
+     
+        print('Knee point is at L =                 %d' %(kn.knee))
     
     plt.show()
