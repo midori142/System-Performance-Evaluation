@@ -6,11 +6,13 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from kneed import KneeLocator
 
+import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
+
 # Define parameters for the single queue M/M/1/n
 LAMBDA = 0.12
-MU = 0.1
+MU     = 0.1
 BUFFER = 100
-
 RHO = LAMBDA/MU
 
 # Simulation settings
@@ -261,8 +263,11 @@ if (PLOT):
     #Knee locator
     a = range(1, len(relative_change)+1)
     kn = KneeLocator(a, relative_change, curve = 'concave', direction = 'increasing')
+    ymin, ymax = axs[1][1].get_ybound()
+    axs[1][1].plot([kn.knee, kn.knee], [ymin, ymax])
+    
+    
     print('Knee point is at L =                 %d' %(kn.knee))
-    # plt.step(log[index.knee,0],meanR[index.knee],'r*')
-    # plt.text(log[index.knee,0]-0.05,meanR[index.knee],'Knee Point')
+    
 
     plt.show()
