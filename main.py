@@ -10,9 +10,9 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 
 # Define parameters for the single queue M/M/1/n
-LAMBDA = 0.3
-MU     = 0.2
-BUFFER = 100
+LAMBDA = 2
+MU     = 3
+BUFFER = 1000
 RHO    = LAMBDA/MU
 
 # Simulation settings
@@ -21,6 +21,10 @@ VERBOSE      = False
 LOGGED       = True
 PLOT         = True
 REPLICATIONS = 4
+
+INFINITE_TIME = 100000000
+SIMULATION_TIME = 10000
+POPULATION = 50000000
 random.seed(SEED)
 
 class Job:
@@ -195,9 +199,7 @@ if (LOGGED):
         logs[i].write('Time,Queue Length,Mean Response Time,Mean Waiting Time,Utilization,Reliability\n')
 
 # Create a simulation environment
-INFINITE_TIME = 100000000
-SIMULATION_TIME = 10000
-POPULATION = 50000000
+
 envs = []
 servers = []
 job_generators = []
@@ -264,7 +266,7 @@ if (PLOT):
     for col in range(len(metrics)):
         # Mean accross replications
         #axs[0][col].set_title('Mean across replications')
-        axs[col][0].set_title('Mean across replications')
+        axs[0][0].set_title('Mean across replications')
         df_mean = pd.concat(tuple([df for df in dfs]))
         df_mean = df_mean.groupby('Time').sum().reset_index()
         df_mean[metrics[col]] /= REPLICATIONS
@@ -280,7 +282,7 @@ if (PLOT):
         df_mean_nl.to_csv('mean_nl.csv')
     
         # Relative change
-        axs[col][1].set_title('Relative changes')
+        axs[0][1].set_title('Relative changes')
         mean = df_mean[metrics[col]].mean()
         relative_change = (mean_nl - mean)/mean
         df_relative_change = pd.DataFrame({'L':l, 'Relative change':relative_change})
@@ -292,6 +294,6 @@ if (PLOT):
         ymin, ymax = axs[col][1].get_ybound()
         axs[col][1].plot([kn.knee, kn.knee], [ymin, ymax], linestyle = 'dashed', color = 'red')
      
-        print('Knee point is at L =                 %d' %(kn.knee))
+        #print('Knee point is at L =                 %d' %(kn.knee))
     
     plt.show()
