@@ -10,16 +10,16 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 
 # Define parameters for the single queue M/M/1/n
-LAMBDA = 0.12
-MU     = 0.1
-BUFFER = 100
-RHO = LAMBDA/MU
+LAMBDA = 1
+MU     = 0.2
+BUFFER = 1000
+RHO    = LAMBDA/MU
 
 # Simulation settings
-SEED = 2019
-VERBOSE = False
-LOGGED = True
-PLOT = True
+SEED         = 2019
+VERBOSE      = False
+LOGGED       = True
+PLOT         = True
 REPLICATIONS = 4
 random.seed(SEED)
 
